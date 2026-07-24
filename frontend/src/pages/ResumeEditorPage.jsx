@@ -34,6 +34,58 @@ import SkillsStep from '../components/Resume/steps/SkillsStep';
 import ProjectsStep from '../components/Resume/steps/ProjectsStep';
 import ExperienceStep from '../components/Resume/steps/ExperienceStep';
 
+const cleanWord = (word) => word.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").trim();
+
+const getSignificantWords = (text) => {
+  const stopwords = new Set([
+    'i', 'my', 'we', 'the', 'a', 'an', 'in', 'on', 'with', 'to', 'for', 'and', 'or', 'of',
+    'at', 'by', 'from', 'about', 'as', 'into', 'like', 'through', 'after', 'over', 'between',
+    'out', 'against', 'during', 'without', 'before', 'under', 'around', 'among',
+    'worked', 'helped', 'responsible', 'assisted', 'handled', 'managed', 'led'
+  ]);
+  return text
+    .split(/\s+/)
+    .map(cleanWord)
+    .filter(w => w.length > 1 && !stopwords.has(w));
+};
+
+const findBestMatchingField = (resume, rewrittenBullet) => {
+  const rewrittenWords = getSignificantWords(rewrittenBullet);
+  if (rewrittenWords.length === 0) return null;
+
+  let bestMatch = null;
+  let maxOverlap = 0;
+
+  const scoreLine = (text, fieldPath, index) => {
+    if (!text) return;
+    const lines = text.split('\n');
+    lines.forEach((line, lineIdx) => {
+      const lineWords = getSignificantWords(line);
+      const overlap = lineWords.filter(w => rewrittenWords.includes(w)).length;
+      if (overlap > maxOverlap) {
+        maxOverlap = overlap;
+        bestMatch = { fieldPath, index, lineIdx, originalLine: line };
+      }
+    });
+  };
+
+  scoreLine(resume.personalInfo?.summary, 'personalInfo.summary', null);
+
+  if (Array.isArray(resume.experience)) {
+    resume.experience.forEach((exp, idx) => {
+      scoreLine(exp.description, 'experience', idx);
+    });
+  }
+
+  if (Array.isArray(resume.projects)) {
+    resume.projects.forEach((proj, idx) => {
+      scoreLine(proj.description, 'projects', idx);
+    });
+  }
+
+  return maxOverlap > 0 ? bestMatch : null;
+};
+
 const STEP_ICONS = {
   User,
   GraduationCap,
@@ -125,6 +177,46 @@ export default function ResumeEditorPage() {
       ...prev,
       skills: Array.from(new Set([...(prev.skills || []), ...analysis.recommended_skills])),
     }));
+    setSaved(false);
+  };
+
+  const handleApplyBullet = (rewrittenBullet) => {
+    const match = findBestMatchingField(resume, rewrittenBullet);
+    if (!match) {
+      alert("Could not automatically locate the matching bullet point in your resume to replace. You can still copy and paste it manually.");
+      return;
+    }
+
+    setResume((prev) => {
+      const next = { ...prev };
+      if (match.fieldPath === 'personalInfo.summary') {
+        const lines = (next.personalInfo?.summary || '').split('\n');
+        lines[match.lineIdx] = rewrittenBullet;
+        next.personalInfo = {
+          ...next.personalInfo,
+          summary: lines.join('\n'),
+        };
+      } else if (match.fieldPath === 'experience') {
+        const expList = [...(next.experience || [])];
+        const lines = (expList[match.index].description || '').split('\n');
+        lines[match.lineIdx] = rewrittenBullet;
+        expList[match.index] = {
+          ...expList[match.index],
+          description: lines.join('\n'),
+        };
+        next.experience = expList;
+      } else if (match.fieldPath === 'projects') {
+        const projList = [...(next.projects || [])];
+        const lines = (projList[match.index].description || '').split('\n');
+        lines[match.lineIdx] = rewrittenBullet;
+        projList[match.index] = {
+          ...projList[match.index],
+          description: lines.join('\n'),
+        };
+        next.projects = projList;
+      }
+      return next;
+    });
     setSaved(false);
   };
 
@@ -397,6 +489,7 @@ export default function ResumeEditorPage() {
           setTargetRole={setTargetRole}
           onAnalyze={handleAnalyze}
           onApplySkills={handleApplySkills}
+          onApplyBullet={handleApplyBullet}
         />
       </div>
     </div>

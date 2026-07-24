@@ -1,8 +1,47 @@
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Brain, CheckCircle2, ClipboardList, Loader2, Sparkles, Wand2, Plus } from 'lucide-react';
+import { Brain, CheckCircle2, ClipboardList, Loader2, Sparkles, Wand2, Plus, Copy, Check } from 'lucide-react';
 
 function SkeletonLine({ className = '' }) {
   return <div className={`animate-pulse rounded-full bg-white/10 ${className}`} />;
+}
+
+function CopyableBullet({ text, onApply }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  return (
+    <li className="group relative rounded-2xl bg-white/5 p-3 pr-20 leading-relaxed hover:bg-white/10 transition duration-150">
+      <span>{text}</span>
+      <div className="absolute right-3 top-3 flex items-center gap-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
+        <button
+          type="button"
+          onClick={() => onApply(text)}
+          className="text-slate-400 hover:text-brand-300 transition"
+          title="Apply directly to resume"
+        >
+          <Wand2 className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="text-slate-400 hover:text-white transition"
+          title="Copy to clipboard"
+        >
+          {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+        </button>
+      </div>
+    </li>
+  );
 }
 
 export default function AiSuggestionsPanel({
@@ -13,6 +52,7 @@ export default function AiSuggestionsPanel({
   setTargetRole,
   onAnalyze,
   onApplySkills,
+  onApplyBullet,
 }) {
   return (
     <AnimatePresence>
@@ -130,9 +170,7 @@ export default function AiSuggestionsPanel({
                   </div>
                   <ul className="space-y-3 text-sm text-slate-200">
                     {(analysis.improved_points || []).map((item) => (
-                      <li key={item} className="rounded-2xl bg-white/5 p-3 leading-relaxed">
-                        {item}
-                      </li>
+                      <CopyableBullet key={item} text={item} onApply={onApplyBullet} />
                     ))}
                   </ul>
                 </div>
