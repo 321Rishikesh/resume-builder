@@ -1,4 +1,4 @@
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
+const { analyzeResume } = require('../services/aiService');
 
 function buildResumeText(resume = {}) {
   const personalInfo = resume.personalInfo || {};
@@ -50,22 +50,10 @@ exports.analyzeResume = async (req, res) => {
       return res.status(400).json({ message: 'role and resume_text or resume are required' });
     }
 
-    const response = await fetch(`${AI_SERVICE_URL}/analyze`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: role.trim(), resume_text: resolvedResumeText }),
-    });
-
-    if (!response.ok) {
-      const detail = await response.text();
-      console.error('AI service error:', detail);
-      return res.status(502).json({ message: 'AI analysis service unavailable' });
-    }
-
-    const data = await response.json();
+    const data = analyzeResume(role.trim(), resolvedResumeText);
     res.json(data);
   } catch (error) {
-    console.error('AI proxy error:', error.message);
-    res.status(502).json({ message: 'Failed to reach AI analysis service' });
+    console.error('AI analysis error:', error.message);
+    res.status(500).json({ message: 'Failed to analyze resume' });
   }
 };

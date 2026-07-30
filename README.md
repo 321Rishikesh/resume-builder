@@ -25,6 +25,15 @@ A full-stack web application for creating professional resumes with live preview
 
 ```
 resume builder/
+├── ai-service/
+│   ├── app/
+│   │   ├── main.py            # FastAPI entry point
+│   │   ├── routers/           # API router/endpoints
+│   │   ├── schemas.py         # Pydantic request/response models
+│   │   └── services/          # NLP and analysis logic
+│   ├── requirements.txt       # Python dependencies
+│   └── Procfile               # Production execution config
+│
 ├── backend/
 │   ├── config/
 │   │   └── db.js              # MongoDB connection
@@ -71,7 +80,7 @@ resume builder/
 │   ├── package.json
 │   ├── tailwind.config.js
 │   └── vite.config.js
-│
+├── start-all.bat              # Windows launcher script for all services
 └── README.md
 ```
 
@@ -82,6 +91,12 @@ resume builder/
 - **npm** or **yarn**
 
 ## Setup Instructions
+
+### Quick Start (Windows)
+If you are on Windows and have completed the setup for each service, you can run all three services concurrently (in separate command prompt windows) using:
+```bash
+.\start-all.bat
+```
 
 ### 1. Clone / navigate to the project
 
@@ -135,7 +150,31 @@ npm run dev
 
 The app runs at **http://localhost:3000**.
 
-### 4. Use the Application
+### 4. AI Service Setup (Required for AI Suggestions)
+
+Open a new terminal:
+
+```bash
+cd ai-service
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# macOS / Linux
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the AI service
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The service runs at **http://localhost:8000**.
+
+### 5. Use the Application
+
 
 1. Open **http://localhost:3000** in your browser
 2. Click **Sign up** to create an account
