@@ -81,4 +81,16 @@ export const TEMPLATES = [
     description: 'Simple and elegant typography',
     preview: 'bg-gradient-to-br from-emerald-600 to-teal-800',
   },
+  {
+    id: 'card',
+    name: 'Card Accent',
+    description: 'Structured panel card separation',
+    preview: 'bg-gradient-to-br from-indigo-500 to-teal-500',
+  },
+  {
+    id: 'creative',
+    name: 'Creative Tech',
+    description: 'Vibrant dual-column asymmetry',
+    preview: 'bg-gradient-to-br from-violet-600 to-purple-800',
+  },
 ];

@@ -2,11 +2,15 @@ import { useState, useRef, useEffect } from 'react';
 import ModernTemplate from '../templates/ModernTemplate';
 import ClassicTemplate from '../templates/ClassicTemplate';
 import MinimalTemplate from '../templates/MinimalTemplate';
+import CardTemplate from '../templates/CardTemplate';
+import CreativeTemplate from '../templates/CreativeTemplate';
 
 const TEMPLATE_MAP = {
   modern: ModernTemplate,
   classic: ClassicTemplate,
   minimal: MinimalTemplate,
+  card: CardTemplate,
+  creative: CreativeTemplate,
 };
 
 export default function LivePreview({ data }) {
