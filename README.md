@@ -117,16 +117,20 @@ Create a `.env` file from the example:
 cp .env.example .env
 ```
 
-Edit `.env` with your values:
+Edit `.env` with your values. For MongoDB Atlas, use the connection string from
+**Atlas → Database → Connect → Drivers**, URL-encode special characters in the
+database username or password, and replace the placeholders below:
 
 ```env
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/resume-builder
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/resume-builder?retryWrites=true&w=majority
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
 JWT_EXPIRE=7d
+CORS_ORIGIN=http://localhost:3000
 ```
 
-Start MongoDB locally (if not using Atlas), then run the server:
+In Atlas, also create a database user and add your current IP address under
+**Network Access**. Then run the server:
 
 ```bash
 # Development (with auto-reload)
@@ -183,6 +187,23 @@ The service runs at **http://localhost:8000**.
 5. Choose a template (Modern / Classic / Minimal)
 6. Click **Save** to persist, then **Download PDF** to export
 
+## Docker Compose
+
+Make sure `backend/.env` contains your MongoDB Atlas URI and JWT secret, then
+run all services from the project root:
+
+```bash
+docker compose up --build
+```
+
+Open **http://localhost:3000**. The backend is available at
+**http://localhost:5000**, and the AI service is available at
+**http://localhost:8000**. Stop the services with:
+
+```bash
+docker compose down
+```
+
 ## API Endpoints
 
 ### Auth
@@ -209,7 +230,7 @@ The service runs at **http://localhost:8000**.
 | Variable       | Description                    | Default                              |
 |----------------|--------------------------------|--------------------------------------|
 | `PORT`         | Backend server port            | `5000`                               |
-| `MONGODB_URI`  | MongoDB connection string      | `mongodb://localhost:27017/resume-builder` |
+| `MONGODB_URI`  | MongoDB Atlas connection string | *(required)*                         |
 | `JWT_SECRET`   | Secret key for JWT signing     | *(required)*                         |
 | `JWT_EXPIRE`   | Token expiration time          | `7d`                                 |
 
