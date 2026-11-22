@@ -1,4 +1,5 @@
 const { analyzeResume } = require('../services/aiService');
+const { generateResumeWithAI } = require('../services/resumeGenerator');
 
 function buildResumeText(resume = {}) {
   const personalInfo = resume.personalInfo || {};
@@ -55,5 +56,19 @@ exports.analyzeResume = async (req, res) => {
   } catch (error) {
     console.error('AI analysis error:', error.message);
     res.status(500).json({ message: 'Failed to analyze resume' });
+  }
+};
+
+exports.generateResume = async (req, res) => {
+  try {
+    const { command } = req.body;
+    if (!command?.trim()) {
+      return res.status(400).json({ message: 'A resume command is required' });
+    }
+
+    res.json(await generateResumeWithAI(command));
+  } catch (error) {
+    console.error('Resume generation error:', error.message);
+    res.status(502).json({ message: `AI generation failed: ${error.message}` });
   }
 };

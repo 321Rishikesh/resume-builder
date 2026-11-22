@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Brain, CheckCircle2, ClipboardList, Loader2, Sparkles, Wand2, Plus, Copy, Check } from 'lucide-react';
+import { Brain, CheckCircle2, ClipboardList, Loader2, Sparkles, Wand2, Plus, Copy, Check, FilePlus2 } from 'lucide-react';
 
 function SkeletonLine({ className = '' }) {
   return <div className={`animate-pulse rounded-full bg-white/10 ${className}`} />;
@@ -53,6 +53,10 @@ export default function AiSuggestionsPanel({
   onAnalyze,
   onApplySkills,
   onApplyBullet,
+  command,
+  setCommand,
+  onGenerateResume,
+  generatingResume,
 }) {
   return (
     <AnimatePresence>
@@ -62,7 +66,7 @@ export default function AiSuggestionsPanel({
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 24 }}
           transition={{ duration: 0.22 }}
-          className="fixed inset-y-0 right-0 z-30 w-full max-w-md border-l border-white/20 bg-slate-950/95 p-4 text-white shadow-2xl backdrop-blur-2xl lg:sticky lg:top-0 lg:h-screen lg:max-h-screen lg:w-[390px]"
+          className="fixed inset-y-0 right-0 z-30 flex h-[100dvh] w-full max-w-md flex-col overflow-hidden border-l border-white/20 bg-slate-950/95 p-4 text-white shadow-2xl backdrop-blur-2xl lg:sticky lg:top-0 lg:w-[390px]"
         >
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
@@ -71,7 +75,7 @@ export default function AiSuggestionsPanel({
                 AI Assistant
               </div>
               <h3 className="mt-3 text-lg font-semibold">Improve with AI</h3>
-              <p className="text-sm text-slate-300">Analyze the current resume and surface the next best edits.</p>
+              <p className="text-sm text-slate-300">Draft a complete resume or improve the one you have.</p>
             </div>
             <button
               type="button"
@@ -84,6 +88,31 @@ export default function AiSuggestionsPanel({
             </button>
           </div>
 
+          <div className="panel-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+          <div className="mb-4 rounded-3xl border border-brand-400/25 bg-brand-500/10 p-4">
+            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-brand-100">
+              <FilePlus2 className="h-4 w-4" />
+              Create from a command
+            </div>
+            <textarea
+              value={command}
+              onChange={(e) => setCommand(e.target.value)}
+              placeholder="Create a frontend developer resume for Rahul Sharma with 3 years of React experience at Acme, based in Bengaluru. Skills: React, JavaScript, CSS."
+              rows={4}
+              className="w-full resize-none rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3 text-sm leading-6 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-400/40"
+            />
+            <button
+              type="button"
+              onClick={onGenerateResume}
+              disabled={generatingResume || !command.trim()}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-slate-900 transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {generatingResume ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4 text-brand-600" />}
+              {generatingResume ? 'Building your draft...' : 'Generate full resume'}
+            </button>
+            <p className="mt-2 text-[11px] leading-4 text-slate-400">Your command becomes an editable draft. Review details before saving.</p>
+          </div>
+
           <div className="mb-4 rounded-3xl border border-white/10 bg-white/5 p-4 shadow-inner">
             <label className="mb-2 block text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Target role</label>
             <input
@@ -94,7 +123,7 @@ export default function AiSuggestionsPanel({
             />
           </div>
 
-          <div className="space-y-4 overflow-y-auto pb-10 pr-1 lg:h-[calc(100vh-220px)]">
+          <div className="space-y-4 pb-10">
             {loading ? (
               <div className="space-y-4">
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
@@ -180,6 +209,7 @@ export default function AiSuggestionsPanel({
                 Run an analysis to generate suggestions for the current resume.
               </div>
             )}
+          </div>
           </div>
         </motion.aside>
       )}

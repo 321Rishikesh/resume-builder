@@ -109,8 +109,10 @@ export default function ResumeEditorPage() {
   const [showAiPanel, setShowAiPanel] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [generatingResume, setGeneratingResume] = useState(false);
   const [analysis, setAnalysis] = useState(null);
   const [targetRole, setTargetRole] = useState('');
+  const [command, setCommand] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
 
   useEffect(() => {
@@ -168,6 +170,27 @@ export default function ResumeEditorPage() {
       alert(getErrorMessage(err));
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleGenerateResume = async () => {
+    setGeneratingResume(true);
+    try {
+      const { data } = await api.post('/ai/generate', { command });
+      setResume((prev) => ({
+        ...prev,
+        ...data,
+        _id: prev._id,
+        user: prev.user,
+      }));
+      setTargetRole(data.targetRole || '');
+      setAnalysis(null);
+      setSaved(false);
+      setCurrentStep(0);
+    } catch (err) {
+      alert(getErrorMessage(err));
+    } finally {
+      setGeneratingResume(false);
     }
   };
 
@@ -340,7 +363,7 @@ export default function ResumeEditorPage() {
                 onChange={(e) => updateResume('title', e.target.value)}
                 className="max-w-[220px] truncate border-none bg-transparent text-lg font-semibold text-slate-900 outline-none dark:text-white lg:max-w-xs"
               />
-              <p className="text-xs text-slate-500 dark:text-slate-400">Live preview updates as you type.</p>
+              <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Live preview updates as you type.</p>
             </div>
           </div>
 
@@ -395,7 +418,7 @@ export default function ResumeEditorPage() {
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Builder steps</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Navigate each resume section in sequence.</p>
+                    <p className="text-xs font-medium text-slate-700 dark:text-slate-300">Navigate each resume section in sequence.</p>
                   </div>
                 </div>
                 <div className="grid gap-2">
@@ -413,7 +436,7 @@ export default function ResumeEditorPage() {
                             ? 'bg-brand-50 text-brand-700 shadow-sm dark:bg-brand-500/20 dark:text-brand-100'
                             : isCompleted
                             ? 'bg-slate-50 text-slate-700 hover:bg-slate-100 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10'
-                            : 'bg-transparent text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-white/5'
+                            : 'bg-transparent text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/5'
                         }`}
                       >
                         <span className={`flex h-8 w-8 items-center justify-center rounded-xl ${
@@ -421,7 +444,7 @@ export default function ResumeEditorPage() {
                             ? 'bg-brand-600 text-white'
                             : isCompleted
                             ? 'bg-brand-100 text-brand-700 dark:bg-brand-500/30 dark:text-brand-100'
-                            : 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300'
+                            : 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-300'
                         }`}>
                           {isCompleted ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                         </span>
@@ -454,7 +477,7 @@ export default function ResumeEditorPage() {
                 <ChevronLeft className="h-4 w-4" />
                 Back
               </button>
-              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
                 <span className="rounded-full bg-brand-50 px-3 py-1 text-brand-700 dark:bg-brand-500/15 dark:text-brand-100">
                   {SECTION_LABELS[previewOrder[0]] || 'Ordered sections'}
                 </span>
@@ -490,6 +513,10 @@ export default function ResumeEditorPage() {
           onAnalyze={handleAnalyze}
           onApplySkills={handleApplySkills}
           onApplyBullet={handleApplyBullet}
+          command={command}
+          setCommand={setCommand}
+          onGenerateResume={handleGenerateResume}
+          generatingResume={generatingResume}
         />
       </div>
     </div>

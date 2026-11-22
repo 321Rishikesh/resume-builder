@@ -16,7 +16,7 @@ export default function TemplateSelector({ selected, onChange }) {
         >
           <div className={`mb-2 h-16 rounded-lg ${template.preview}`} />
           <p className="text-sm font-semibold text-surface-900">{template.name}</p>
-          <p className="text-xs text-surface-500">{template.description}</p>
+          <p className="text-xs text-surface-700">{template.description}</p>
         </button>
       ))}
     </div>
