@@ -150,6 +150,7 @@ async function generateResumeWithAI(command) {
   }
 
   const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+  const models = Array.from(new Set([model, process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite']));
   const instructions = [
     'You are an expert resume writer and career coach.',
     'Create a complete, polished, ATS-friendly resume from the user command.',
@@ -160,34 +161,41 @@ async function generateResumeWithAI(command) {
     'Use one bullet per line in description fields. Keep the resume concise but complete.',
   ].join(' ');
 
-  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      model,
-      input: `${instructions}\n\nUser command:\n${command}`,
-      response_format: {
-        type: 'text',
-        mime_type: 'application/json',
-        schema: resumeSchema,
+  let lastError = null;
+  for (const selectedModel of models) {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
       },
-    }),
-  });
+      body: JSON.stringify({
+        model: selectedModel,
+        input: `${instructions}\n\nUser command:\n${command}`,
+        response_format: {
+          type: 'text',
+          mime_type: 'application/json',
+          schema: resumeSchema,
+        },
+      }),
+    });
 
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.error?.message || 'Gemini request failed');
+    const payload = await response.json();
+    if (response.ok) {
+      const outputText = payload.output_text || payload.steps
+        ?.find((step) => step.type === 'model_output')?.content
+        ?.find((part) => part.type === 'text')?.text;
+
+      if (!outputText) throw new Error('Gemini returned an empty resume');
+      return JSON.parse(outputText);
+    }
+
+    lastError = new Error(payload.error?.message || 'Gemini request failed');
+    const retryable = response.status === 429 || response.status === 503 || /high demand|temporarily|unavailable/i.test(lastError.message);
+    if (!retryable) throw lastError;
   }
 
-  const outputText = payload.output_text || payload.steps
-    ?.find((step) => step.type === 'model_output')?.content
-    ?.find((part) => part.type === 'text')?.text;
-
-  if (!outputText) throw new Error('Gemini returned an empty resume');
-  return JSON.parse(outputText);
+  throw lastError || new Error('Gemini request failed');
 }
 
 module.exports = { generateResumeFromCommand, generateResumeWithAI };
