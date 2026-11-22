@@ -24,7 +24,7 @@ function generateResumeFromCommand(command = '') {
   const lower = text.toLowerCase();
   const fullName = clean(
     afterLabel(text, ['name', 'full name']) ||
-    text.match(/(?:my name is|name is|for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})(?=\s+(?:with|as|who|from|based|at)|,|\.)/i)?.[1] || ''
+    text.match(/(?:my name is|name is|for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})(?=\s+(?:with|as|who|from|based|at)|,|\.|$)/i)?.[1] || ''
   );
   const email = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/)?.[0] || '';
   const phone = text.match(/(?:\+?\d[\d ()-]{8,}\d)/)?.[0]?.trim() || '';
@@ -143,42 +143,59 @@ const resumeSchema = {
   },
 };
 
-async function generateResumeWithAI(command) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return generateResumeFromCommand(command);
+function toGeminiSchema(schema) {
+  if (schema.type === 'object') {
+    return {
+      type: 'OBJECT',
+      properties: Object.fromEntries(Object.entries(schema.properties || {}).map(([key, value]) => [key, toGeminiSchema(value)])),
+      required: schema.required || [],
+    };
+  }
+  if (schema.type === 'array') return { type: 'ARRAY', items: toGeminiSchema(schema.items) };
+  const result = { type: schema.type.toUpperCase() };
+  if (schema.enum) result.enum = schema.enum;
+  return result;
+}
 
-  const response = await fetch('https://api.openai.com/v1/responses', {
+async function generateResumeWithAI(command) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured on the backend');
+  }
+
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const instructions = [
+    'You are an expert resume writer and career coach.',
+    'Create a complete, polished, ATS-friendly resume from the user command.',
+    'Return only the requested structured resume object.',
+    'Use only facts supplied by the user. Never invent employers, dates, degrees, contact details, metrics, or achievements.',
+    'When information is missing, use an empty string or a clear editable placeholder such as [Add company] or [Add achievement].',
+    'Write a strong 2-3 sentence summary, role-specific skills, and concise experience/project bullets.',
+    'Use one bullet per line in description fields. Keep the resume concise but complete.',
+  ].join(' ');
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
-      instructions: [
-      'You are an expert resume writer and career coach.',
-      'Create a complete, polished, ATS-friendly resume from the user command.',
-      'Return only the requested structured resume object.',
-      'Use only facts supplied by the user. Never invent employers, dates, degrees, contact details, metrics, or achievements.',
-      'When information is missing, use an empty string or a clear editable placeholder such as [Add company] or [Add achievement].',
-      'Write a strong 2-3 sentence summary, role-specific skills, and concise experience/project bullets.',
-      'Use one bullet per line in description fields. Keep the resume concise but complete.',
-      ].join(' '),
-      input: command,
-      text: { format: { type: 'json_schema', name: 'resume_draft', strict: true, schema: resumeSchema } },
+      contents: [{ role: 'user', parts: [{ text: `${instructions}\n\nUser command:\n${command}` }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: toGeminiSchema(resumeSchema),
+      },
     }),
   });
 
   const payload = await response.json();
   if (!response.ok) {
-    throw new Error(payload.error?.message || 'OpenAI request failed');
+    throw new Error(payload.error?.message || 'Gemini request failed');
   }
 
-  const outputText = payload.output
-    ?.flatMap((item) => item.content || [])
-    ?.find((item) => item.type === 'output_text')?.text;
+  const outputText = payload.candidates?.[0]?.content?.parts?.find((part) => part.text)?.text;
 
-  if (!outputText) throw new Error('OpenAI returned an empty resume');
+  if (!outputText) throw new Error('Gemini returned an empty resume');
   return JSON.parse(outputText);
 }
 
