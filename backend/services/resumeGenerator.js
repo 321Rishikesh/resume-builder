@@ -143,27 +143,13 @@ const resumeSchema = {
   },
 };
 
-function toGeminiSchema(schema) {
-  if (schema.type === 'object') {
-    return {
-      type: 'OBJECT',
-      properties: Object.fromEntries(Object.entries(schema.properties || {}).map(([key, value]) => [key, toGeminiSchema(value)])),
-      required: schema.required || [],
-    };
-  }
-  if (schema.type === 'array') return { type: 'ARRAY', items: toGeminiSchema(schema.items) };
-  const result = { type: schema.type.toUpperCase() };
-  if (schema.enum) result.enum = schema.enum;
-  return result;
-}
-
 async function generateResumeWithAI(command) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured on the backend');
   }
 
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   const instructions = [
     'You are an expert resume writer and career coach.',
     'Create a complete, polished, ATS-friendly resume from the user command.',
@@ -174,16 +160,19 @@ async function generateResumeWithAI(command) {
     'Use one bullet per line in description fields. Keep the resume concise but complete.',
   ].join(' ');
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+  const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
     },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: `${instructions}\n\nUser command:\n${command}` }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: toGeminiSchema(resumeSchema),
+      model,
+      input: `${instructions}\n\nUser command:\n${command}`,
+      response_format: {
+        type: 'text',
+        mime_type: 'application/json',
+        schema: resumeSchema,
       },
     }),
   });
@@ -193,7 +182,9 @@ async function generateResumeWithAI(command) {
     throw new Error(payload.error?.message || 'Gemini request failed');
   }
 
-  const outputText = payload.candidates?.[0]?.content?.parts?.find((part) => part.text)?.text;
+  const outputText = payload.output_text || payload.steps
+    ?.find((step) => step.type === 'model_output')?.content
+    ?.find((part) => part.type === 'text')?.text;
 
   if (!outputText) throw new Error('Gemini returned an empty resume');
   return JSON.parse(outputText);
